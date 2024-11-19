@@ -1,3 +1,4 @@
+import type { ExpoConfig } from "@expo/config";
 import {
   ConfigPlugin,
   IOSConfig,
@@ -330,8 +331,10 @@ const withIconInfoPlist: ConfigPlugin<Props> = (
         config.modResults[key] = {};
       }
 
+      // @ts-ignore
       config.modResults[key].CFBundleAlternateIcons = icons;
 
+      // @ts-ignore
       config.modResults[key].CFBundlePrimaryIcon = {
         CFBundleIconFiles: ["AppIcon"],
       };
@@ -430,7 +433,7 @@ function resolveIconDimensions(config: ExpoConfig): Required<IconDimensions>[] {
     targets.push("ipad");
   }
 
-  return ICON_DIMENSIONS.filter(
+  return IOS_ICON_DIMENSIONS.filter(
     ({ target }) => !target || targets.includes(target),
   ).map((dimension) => ({
     ...dimension,
