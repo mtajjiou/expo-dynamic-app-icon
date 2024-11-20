@@ -20,6 +20,14 @@ export default function App() {
         <Text>{iconName || "Press Button!"}</Text>
       </View>
 
+
+      <View style={{ marginBottom: 16 }}>
+              <Button
+                title="change default icon"
+                onPress={() => console.log(setAppIcon(null))}
+              />
+            </View>
+
       <View style={{ marginBottom: 16 }}>
         <Button
           title="change red icon"

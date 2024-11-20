@@ -1,12 +1,12 @@
 package expo.modules.dynamicappicon
 
-import android.content.pm.PackageManager;
-import android.content.ComponentName;
+import android.content.pm.PackageManager
+import android.content.ComponentName
 import android.app.Activity
 import android.os.Bundle
 import expo.modules.core.interfaces.ReactActivityLifecycleListener
 
-import java.util.ArrayList;
+import java.util.ArrayList
 
 
 object SharedObject {
@@ -22,7 +22,7 @@ class ExpoDynamicAppIconReactActivityLifecycleListener : ReactActivityLifecycleL
   override fun onPause(activity: Activity) {
     SharedObject.classesToKill.forEach{ cls ->
       if(SharedObject.pm != null){
-        
+
         if(cls != SharedObject.icon){
           SharedObject.pm?.setComponentEnabledSetting(
             ComponentName(SharedObject.packageName, cls),
