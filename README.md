@@ -1,4 +1,4 @@
-# expo-dynamic-app-icon
+# @mozzius/expo-dynamic-app-icon
 
 >[!NOTE]
 > This is a fork of [expo-dynamic-app-icon](https://github.com/outsung/expo-dynamic-app-icon) to support Expo SDK 51.
@@ -8,7 +8,7 @@ Programmatically change the app icon in Expo.
 ## Install
 
 ```
-npx expo install expo-dynamic-app-icon
+npx expo install @mozzius/expo-dynamic-app-icon
 ```
 
 ## Set icon file
@@ -67,6 +67,7 @@ create a new `expo-dev-client` and begin using `expo-dynamic-app-icon`
 
 - if error, return **false**
 - else, return **changed app icon name**
+- pass `null` to reset app icon to default
 
 ```typescript
 import { setAppIcon } from "expo-dynamic-app-icon";
@@ -89,5 +90,7 @@ import { getAppIcon } from "expo-dynamic-app-icon";
 
 getAppIcon() // get current icon name 'red'
 ```
+
+Buy outsung (original author) a coffee! I couldn't have dont it without his work! 👇
 
 <a href="https://www.buymeacoffee.com/outsung" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy Me A Coffee" style="height: 41px !important;width: 174px !important;box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;-webkit-box-shadow: 0px 3px 2px 0px rgba(190, 190, 190, 0.5) !important;" ></a>

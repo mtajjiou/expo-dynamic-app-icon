@@ -1,5 +1,5 @@
 {
-  "name": "expo-dynamic-app-icon",
+  "name": "@mozzius/expo-dynamic-app-icon",
   "version": "1.3.0",
   "description": "Programmatically change the app icon in Expo.",
   "main": "build/index.js",
@@ -22,22 +22,22 @@
     "expo-dynamic-app-icon",
     "ExpoDynamicAppIcon"
   ],
-  "repository": "https://github.com/outsung/expo-dynamic-app-icon",
+  "repository": "https://github.com/mozzius/expo-dynamic-app-icon",
   "bugs": {
-    "url": "https://github.com/outsung/expo-dynamic-app-icon/issues"
+    "url": "https://github.com/mozzius/expo-dynamic-app-icon/issues"
   },
-  "author": "Junseo Oh <insung9546@gmail.com> (https://github.com/outsung)",
+  "author": "Samuel Newman <mozzius@protonmail.com> (https://github.com/mozzius)",
   "license": "MIT",
-  "homepage": "https://github.com/outsung/expo-dynamic-app-icon#readme",
+  "homepage": "https://github.com/mozzius/expo-dynamic-app-icon#readme",
   "dependencies": {
+    "expo-modules-core": "^1.0.3",
+    "@expo/image-utils": "^0.3.23",
     "xcode": "^3.0.1"
   },
   "devDependencies": {
-    "@expo/image-utils": "^0.3.23",
     "@types/react": "^18.0.25",
     "@types/react-native": "^0.70.6",
-    "expo-module-scripts": "^3.0.3",
-    "expo-modules-core": "^1.0.3"
+    "expo-module-scripts": "^3.5.1"
   },
   "peerDependencies": {
     "expo": "^51",
