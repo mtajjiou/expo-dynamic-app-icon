@@ -43,7 +43,6 @@ const IOS_ICON_DIMENSIONS: IconDimensions[] = [
   { scale: 3, size: 60, width: 167, height: 167, target: "ipad" },
 ];
 
-
 type IconDimensions = {
   /** The scale of the icon itself, affets file name and width/height when omitted. */
   scale: number;
@@ -67,7 +66,7 @@ type Props = {
 
 const withDynamicIcon: ConfigPlugin<string[] | IconSet | void> = (
   config,
-  props = {},
+  props = {}
 ) => {
   const icons = resolveIcons(props);
   const dimensions = resolveIconDimensions(config);
@@ -106,18 +105,24 @@ const withIconAndroidManifest: ConfigPlugin<Props> = (config, { icons }) => {
             "android:exported": "true",
             "android:icon": `@mipmap/${iconName}`,
             "android:targetActivity": ".MainActivity",
+            "android:roundIcon": `@mipmap/${iconName}_round`,
           },
-          "intent-filter": [...mainActivity["intent-filter"] || [
-            {
-              action: [{ $: { "android:name": "android.intent.action.MAIN" } }],
-              category: [
-                { $: { "android:name": "android.intent.category.LAUNCHER" } },
-              ],
-            },
-          ]],
+          "intent-filter": [
+            ...(mainActivity["intent-filter"] || [
+              {
+                action: [
+                  { $: { "android:name": "android.intent.action.MAIN" } },
+                ],
+                category: [
+                  { $: { "android:name": "android.intent.category.LAUNCHER" } },
+                ],
+              },
+            ]),
+          ],
         })),
       ];
     }
+
     function removeIconActivityAlias(config: any[]): any[] {
       return config.filter(
         (activityAlias) =>
@@ -166,22 +171,49 @@ const withIconAndroidImages: ConfigPlugin<Props> = (config, { icons }) => {
           const size = ANDROID_SIZES[i];
           const outputPath = path.join(androidResPath, ANDROID_FOLDER_NAMES[i]);
 
+          // square ones
           for (const [name, { image }] of Object.entries(icons)) {
             const fileName = `${name}.png`;
 
             const { source } = await generateImageAsync(
               {
                 projectRoot: config.modRequest.projectRoot,
-                cacheType: "react-native-dynamic-app-icon",
+                cacheType: "expo-dynamic-app-icon",
               },
               {
                 name: fileName,
                 src: image,
-                // removeTransparency: true,
+                removeTransparency: true,
                 backgroundColor: "#ffffff",
                 resizeMode: "cover",
                 width: size,
                 height: size,
+              }
+            );
+            await fs.promises.writeFile(
+              path.join(outputPath, fileName),
+              source
+            );
+          }
+
+          // round ones
+          for (const [name, { image }] of Object.entries(icons)) {
+            const fileName = `${name}_round.png`;
+
+            const { source } = await generateImageAsync(
+              {
+                projectRoot: config.modRequest.projectRoot,
+                cacheType: "expo-dynamic-app-icon-round",
+              },
+              {
+                name: fileName,
+                src: image,
+                removeTransparency: true,
+                backgroundColor: "#ffffff",
+                resizeMode: "cover",
+                width: size,
+                height: size,
+                borderRadius: size / 2,
               }
             );
             await fs.promises.writeFile(
@@ -206,13 +238,13 @@ const withIconAndroidImages: ConfigPlugin<Props> = (config, { icons }) => {
 
 const withIconXcodeProject: ConfigPlugin<Props> = (
   config,
-  { icons, dimensions },
+  { icons, dimensions }
 ) => {
   return withXcodeProject(config, async (config) => {
     const groupPath = `${config.modRequest.projectName!}/${IOS_FOLDER_NAME}`;
     const group = IOSConfig.XcodeUtils.ensureGroupRecursively(
       config.modResults,
-      groupPath,
+      groupPath
     );
     const project = config.modResults;
     const opt: any = {};
@@ -223,13 +255,13 @@ const withIconXcodeProject: ConfigPlugin<Props> = (
       (id) => {
         const _group = project.hash.project.objects["PBXGroup"][id];
         return _group.name === group.name;
-      },
+      }
     );
     if (!project.hash.project.objects["PBXVariantGroup"]) {
       project.hash.project.objects["PBXVariantGroup"] = {};
     }
     const variantGroupId = Object.keys(
-      project.hash.project.objects["PBXVariantGroup"],
+      project.hash.project.objects["PBXVariantGroup"]
     ).find((id) => {
       const _group = project.hash.project.objects["PBXVariantGroup"][id];
       return _group.name === group.name;
@@ -265,7 +297,7 @@ const withIconXcodeProject: ConfigPlugin<Props> = (
 
         if (
           !group?.children.some(
-            ({ comment }: { comment: string }) => comment === iconFileName,
+            ({ comment }: { comment: string }) => comment === iconFileName
           )
         ) {
           // Only write the file if it doesn't already exist.
@@ -279,7 +311,7 @@ const withIconXcodeProject: ConfigPlugin<Props> = (
         } else {
           console.log("Skipping duplicate: ", iconFileName);
         }
-      },
+      }
     );
 
     return config;
@@ -288,7 +320,7 @@ const withIconXcodeProject: ConfigPlugin<Props> = (
 
 const withIconInfoPlist: ConfigPlugin<Props> = (
   config,
-  { icons, dimensions },
+  { icons, dimensions }
 ) => {
   return withInfoPlist(config, async (config) => {
     const altIcons: Record<
@@ -319,7 +351,7 @@ const withIconInfoPlist: ConfigPlugin<Props> = (
         } else {
           altIcons[key] = plistItem;
         }
-      },
+      }
     );
 
     function applyToPlist(key: string, icons: typeof altIcons) {
@@ -360,7 +392,7 @@ const withIconImages: ConfigPlugin<Props> = (config, { icons, dimensions }) => {
     async (config) => {
       const iosRoot = path.join(
         config.modRequest.platformProjectRoot,
-        config.modRequest.projectName!,
+        config.modRequest.projectName!
       );
 
       // Delete all existing assets
@@ -387,7 +419,7 @@ const withIconImages: ConfigPlugin<Props> = (config, { icons, dimensions }) => {
           const { source } = await generateImageAsync(
             {
               projectRoot: config.modRequest.projectRoot,
-              cacheType: "react-native-dynamic-app-icon",
+              cacheType: "expo-dynamic-app-icon",
             },
             {
               name: iconFileName,
@@ -397,11 +429,11 @@ const withIconImages: ConfigPlugin<Props> = (config, { icons, dimensions }) => {
               resizeMode: "cover",
               width: dimension.width,
               height: dimension.height,
-            },
+            }
           );
 
           await fs.promises.writeFile(outputPath, source);
-        },
+        }
       );
 
       return config;
@@ -416,7 +448,7 @@ function resolveIcons(props: string[] | IconSet | void): Props["icons"] {
   if (Array.isArray(props)) {
     icons = props.reduce(
       (prev, curr, i) => ({ ...prev, [i]: { image: curr } }),
-      {},
+      {}
     );
   } else if (props) {
     icons = props;
@@ -434,7 +466,7 @@ function resolveIconDimensions(config: ExpoConfig): Required<IconDimensions>[] {
   }
 
   return IOS_ICON_DIMENSIONS.filter(
-    ({ target }) => !target || targets.includes(target),
+    ({ target }) => !target || targets.includes(target)
   ).map((dimension) => ({
     ...dimension,
     target: dimension.target ?? null,
@@ -462,8 +494,8 @@ async function iterateIconsAndDimensionsAsync(
     iconAndDimension: {
       icon: Props["icons"][string];
       dimension: Props["dimensions"][0];
-    },
-  ) => Promise<void>,
+    }
+  ) => Promise<void>
 ) {
   for (const [iconKey, icon] of Object.entries(icons)) {
     for (const dimension of dimensions) {
