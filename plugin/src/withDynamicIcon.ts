@@ -179,7 +179,7 @@ const withIconAndroidImages: ConfigPlugin<Props> = (config, { icons }) => {
             const { source } = await generateImageAsync(
               {
                 projectRoot: config.modRequest.projectRoot,
-                cacheType: "expo-dynamic-app-icon",
+                cacheType: `expo-dynamic-app-icon-${size}`,
               },
               {
                 name: fileName,
@@ -205,7 +205,7 @@ const withIconAndroidImages: ConfigPlugin<Props> = (config, { icons }) => {
             const { source } = await generateImageAsync(
               {
                 projectRoot: config.modRequest.projectRoot,
-                cacheType: "expo-dynamic-app-icon-round",
+                cacheType: `expo-dynamic-app-icon-round-${size}`,
               },
               {
                 name: fileName,
@@ -423,7 +423,7 @@ const withIconImages: ConfigPlugin<Props> = (config, { icons, dimensions }) => {
           const { source } = await generateImageAsync(
             {
               projectRoot: config.modRequest.projectRoot,
-              cacheType: "expo-dynamic-app-icon",
+              cacheType: `expo-dynamic-app-icon-${dimension.width}-${dimension.height}`,
             },
             {
               name: iconFileName,
