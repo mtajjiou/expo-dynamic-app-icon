@@ -20,24 +20,23 @@ export default function App() {
         <Text>{iconName || "Press Button!"}</Text>
       </View>
 
-
       <View style={{ marginBottom: 16 }}>
-              <Button
-                title="change default icon"
-                onPress={() => console.log(setAppIcon(null))}
-              />
-            </View>
+        <Button
+          title="change default icon"
+          onPress={() => console.log(setAppIcon(null))}
+        />
+      </View>
 
       <View style={{ marginBottom: 16 }}>
         <Button
-          title="change red icon"
-          onPress={() => console.log(setAppIcon("red"))}
+          title="change light icon"
+          onPress={() => console.log(setAppIcon("light"))}
         />
       </View>
 
       <Button
-        title="change gray icon"
-        onPress={() => console.log(setAppIcon("gray"))}
+        title="change dark icon"
+        onPress={() => console.log(setAppIcon("dark"))}
       />
     </View>
   );

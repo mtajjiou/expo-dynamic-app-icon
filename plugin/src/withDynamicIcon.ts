@@ -57,10 +57,10 @@ type IconDimensions = {
 };
 
 type IconSet = Record<string, IconSetProps>;
-type IconSetProps = { image: string; prerendered?: boolean };
+type IconSetProps = { ios?: string; android?: string; prerendered?: boolean };
 
 type Props = {
-  icons: Record<string, { image: string; prerendered?: boolean }>;
+  icons: IconSet;
   dimensions: Required<IconDimensions>[];
 };
 
@@ -172,7 +172,8 @@ const withIconAndroidImages: ConfigPlugin<Props> = (config, { icons }) => {
           const outputPath = path.join(androidResPath, ANDROID_FOLDER_NAMES[i]);
 
           // square ones
-          for (const [name, { image }] of Object.entries(icons)) {
+          for (const [name, { android }] of Object.entries(icons)) {
+            if (!android) continue;
             const fileName = `${name}.png`;
 
             const { source } = await generateImageAsync(
@@ -182,7 +183,7 @@ const withIconAndroidImages: ConfigPlugin<Props> = (config, { icons }) => {
               },
               {
                 name: fileName,
-                src: image,
+                src: android,
                 removeTransparency: true,
                 backgroundColor: "#ffffff",
                 resizeMode: "cover",
@@ -197,7 +198,8 @@ const withIconAndroidImages: ConfigPlugin<Props> = (config, { icons }) => {
           }
 
           // round ones
-          for (const [name, { image }] of Object.entries(icons)) {
+          for (const [name, { android }] of Object.entries(icons)) {
+            if (!android) continue;
             const fileName = `${name}_round.png`;
 
             const { source } = await generateImageAsync(
@@ -207,7 +209,7 @@ const withIconAndroidImages: ConfigPlugin<Props> = (config, { icons }) => {
               },
               {
                 name: fileName,
-                src: image,
+                src: android,
                 removeTransparency: true,
                 backgroundColor: "#ffffff",
                 resizeMode: "cover",
@@ -335,6 +337,7 @@ const withIconInfoPlist: ConfigPlugin<Props> = (
     await iterateIconsAndDimensionsAsync(
       { icons, dimensions },
       async (key, { icon, dimension }) => {
+        if (!icon.ios) return;
         const plistItem = {
           CFBundleIconFiles: [
             // Must be a file path relative to the source root (not a icon set it seems).
@@ -412,6 +415,7 @@ const withIconImages: ConfigPlugin<Props> = (config, { icons, dimensions }) => {
       await iterateIconsAndDimensionsAsync(
         { icons, dimensions },
         async (key, { icon, dimension }) => {
+          if (!icon.ios) return;
           const iconFileName = getIconFileName(key, dimension);
           const fileName = path.join(IOS_FOLDER_NAME, iconFileName);
           const outputPath = path.join(iosRoot, fileName);
@@ -423,7 +427,7 @@ const withIconImages: ConfigPlugin<Props> = (config, { icons, dimensions }) => {
             },
             {
               name: iconFileName,
-              src: icon.image,
+              src: icon.ios,
               removeTransparency: true,
               backgroundColor: "#ffffff",
               resizeMode: "cover",

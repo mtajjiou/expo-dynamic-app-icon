@@ -1,10 +1,12 @@
 # @mozzius/expo-dynamic-app-icon
 
->[!NOTE]
+> [!NOTE]
 > This is a fork of [expo-dynamic-app-icon](https://github.com/outsung/expo-dynamic-app-icon) to support Expo SDK 51.
 > It also includes:
+>
 > - support for resetting the icon to the default
 > - round icon support
+> - different icons for Android and iOS
 
 Programmatically change the app icon in Expo.
 
@@ -24,12 +26,12 @@ add plugins in `app.json`
         "expo-dynamic-app-icon",
         {
           "red": { // icon name
-            "image": "./assets/icon1.png", // icon path
+            "ios": "./assets/ios_icon1.png", // icon path for ios
+            "android": "./assets/android_icon1.png", // icon path for android
             "prerendered": true // for ios UIPrerenderedIcon option
           },
           "gray": {
-            "image": "./assets/icon2.png",
-            "prerendered": true
+            "android": "./assets/icon2.png", // android-only icon
           }
         }
       ]

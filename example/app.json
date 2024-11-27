@@ -33,12 +33,14 @@
       [
         "../app.plugin",
         {
-          "red": {
-            "image": "./assets/icon1.png",
+          "light": {
+            "ios": "./assets/ios_icon_default_light.png",
+            "android": "./assets/android_icon_default_light.png",
             "prerendered": true
           },
-          "gray": {
-            "image": "./assets/icon2.png",
+          "dark": {
+            "ios": "./assets/ios_icon_default_dark.png",
+            "android": "./assets/android_icon_default_dark.png",
             "prerendered": true
           }
         }
