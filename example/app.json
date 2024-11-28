@@ -39,7 +39,11 @@
             "prerendered": true
           },
           "dark": {
-            "ios": "./assets/ios_icon_default_dark.png",
+            "ios": {
+              "light": "./assets/ios_icon_default_light.png",
+              "dark": "./assets/ios_icon_default_dark.png",
+              "tinted": "./assets/icon.png"
+            },
             "android": "./assets/android_icon_default_dark.png",
             "prerendered": true
           }

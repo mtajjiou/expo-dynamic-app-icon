@@ -29,6 +29,7 @@ const ANDROID_SIZES = [162, 108, 216, 324, 432];
 
 /** The default icon folder name to export to */
 const IOS_FOLDER_NAME = "DynamicAppIcons";
+const IOS_ASSETS_FOLDER_NAME = "Images.xcassets";
 /**
  * The default icon dimensions to export.
  *
@@ -36,11 +37,10 @@ const IOS_FOLDER_NAME = "DynamicAppIcons";
  */
 const IOS_ICON_DIMENSIONS: IconDimensions[] = [
   // iPhone, iPad, MacOS, ...
-  { scale: 2, size: 60 },
-  { scale: 3, size: 60 },
-  // iPad only
-  { scale: 2, size: 60, width: 152, height: 152, target: "ipad" },
-  { scale: 3, size: 60, width: 167, height: 167, target: "ipad" },
+  { scale: 1, size: 1024 },
+  // // iPad only
+  // { scale: 2, size: 60, width: 152, height: 152, target: "ipad" },
+  // { scale: 3, size: 60, width: 167, height: 167, target: "ipad" },
 ];
 
 type IconDimensions = {
@@ -56,8 +56,21 @@ type IconDimensions = {
   target?: null | "ipad";
 };
 
+type IconVariant = "light" | "dark" | "tinted";
+interface AssetImage {
+  filename: string;
+  idiom: "universal";
+  platform: "ios";
+  size: string;
+  appearances?: { appearance: "luminosity"; value: IconVariant }[];
+}
 type IconSet = Record<string, IconSetProps>;
-type IconSetProps = { ios?: string; android?: string; prerendered?: boolean };
+type IosIconSet = string | { light: string; dark?: string; tinted?: string };
+type IconSetProps = {
+  ios?: IosIconSet;
+  android?: string;
+  prerendered?: boolean;
+};
 
 type Props = {
   icons: IconSet;
@@ -72,7 +85,6 @@ const withDynamicIcon: ConfigPlugin<string[] | IconSet | void> = (
   const dimensions = resolveIconDimensions(config);
 
   // for ios
-  config = withIconXcodeProject(config, { icons, dimensions });
   config = withIconInfoPlist(config, { icons, dimensions });
   config = withIconImages(config, { icons, dimensions });
 
@@ -238,88 +250,6 @@ const withIconAndroidImages: ConfigPlugin<Props> = (config, { icons }) => {
 //                                   iOS
 // =============================================================================
 
-const withIconXcodeProject: ConfigPlugin<Props> = (
-  config,
-  { icons, dimensions }
-) => {
-  return withXcodeProject(config, async (config) => {
-    const groupPath = `${config.modRequest.projectName!}/${IOS_FOLDER_NAME}`;
-    const group = IOSConfig.XcodeUtils.ensureGroupRecursively(
-      config.modResults,
-      groupPath
-    );
-    const project = config.modResults;
-    const opt: any = {};
-
-    // Unlink old assets
-
-    const groupId = Object.keys(project.hash.project.objects["PBXGroup"]).find(
-      (id) => {
-        const _group = project.hash.project.objects["PBXGroup"][id];
-        return _group.name === group.name;
-      }
-    );
-    if (!project.hash.project.objects["PBXVariantGroup"]) {
-      project.hash.project.objects["PBXVariantGroup"] = {};
-    }
-    const variantGroupId = Object.keys(
-      project.hash.project.objects["PBXVariantGroup"]
-    ).find((id) => {
-      const _group = project.hash.project.objects["PBXVariantGroup"][id];
-      return _group.name === group.name;
-    });
-
-    const children = [...(group.children || [])];
-
-    for (const child of children as {
-      comment: string;
-      value: string;
-    }[]) {
-      const file = new pbxFile(path.join(group.name, child.comment), opt);
-      file.target = opt ? opt.target : undefined;
-
-      project.removeFromPbxBuildFileSection(file); // PBXBuildFile
-      project.removeFromPbxFileReferenceSection(file); // PBXFileReference
-      if (group) {
-        if (groupId) {
-          project.removeFromPbxGroup(file, groupId); //Group other than Resources (i.e. 'splash')
-        } else if (variantGroupId) {
-          project.removeFromPbxVariantGroup(file, variantGroupId); // PBXVariantGroup
-        }
-      }
-      project.removeFromPbxResourcesBuildPhase(file); // PBXResourcesBuildPhase
-    }
-
-    // Link new assets
-
-    await iterateIconsAndDimensionsAsync(
-      { icons, dimensions },
-      async (key, { dimension }) => {
-        const iconFileName = getIconFileName(key, dimension);
-
-        if (
-          !group?.children.some(
-            ({ comment }: { comment: string }) => comment === iconFileName
-          )
-        ) {
-          // Only write the file if it doesn't already exist.
-          config.modResults = IOSConfig.XcodeUtils.addResourceFileToGroup({
-            filepath: path.join(groupPath, iconFileName),
-            groupName: groupPath,
-            project: config.modResults,
-            isBuildFile: true,
-            verbose: true,
-          });
-        } else {
-          console.log("Skipping duplicate: ", iconFileName);
-        }
-      }
-    );
-
-    return config;
-  });
-};
-
 const withIconInfoPlist: ConfigPlugin<Props> = (
   config,
   { icons, dimensions }
@@ -339,11 +269,7 @@ const withIconInfoPlist: ConfigPlugin<Props> = (
       async (key, { icon, dimension }) => {
         if (!icon.ios) return;
         const plistItem = {
-          CFBundleIconFiles: [
-            // Must be a file path relative to the source root (not a icon set it seems).
-            // i.e. `Bacon-Icon-60x60` when the image is `ios/somn/appIcons/Bacon-Icon-60x60@2x.png`
-            getIconName(key, dimension),
-          ],
+          CFBundleIconFiles: [getIconName(key)],
           UIPrerenderedIcon: !!icon.prerendered,
         };
 
@@ -416,27 +342,58 @@ const withIconImages: ConfigPlugin<Props> = (config, { icons, dimensions }) => {
         { icons, dimensions },
         async (key, { icon, dimension }) => {
           if (!icon.ios) return;
-          const iconFileName = getIconFileName(key, dimension);
-          const fileName = path.join(IOS_FOLDER_NAME, iconFileName);
-          const outputPath = path.join(iosRoot, fileName);
 
-          const { source } = await generateImageAsync(
-            {
-              projectRoot: config.modRequest.projectRoot,
-              cacheType: `expo-dynamic-app-icon-${dimension.width}-${dimension.height}`,
-            },
-            {
-              name: iconFileName,
-              src: icon.ios,
-              removeTransparency: true,
-              backgroundColor: "#ffffff",
-              resizeMode: "cover",
-              width: dimension.width,
-              height: dimension.height,
-            }
+          const iconsetPath = path.join(
+            IOS_ASSETS_FOLDER_NAME,
+            `AppIcon-${key}.appiconset`
+          );
+          const outputIconsetPath = path.join(iosRoot, iconsetPath);
+          await fs.promises
+            .rm(outputIconsetPath, {
+              recursive: true,
+              force: true,
+            })
+            .catch(() => null);
+          await fs.promises.mkdir(outputIconsetPath, { recursive: true });
+
+          const contents = generateIconsetContents(icon.ios, key, dimension);
+          const outputContentsPath = path.join(
+            outputIconsetPath,
+            "Contents.json"
+          );
+          await fs.promises.writeFile(
+            outputContentsPath,
+            JSON.stringify(contents, null, 2)
           );
 
-          await fs.promises.writeFile(outputPath, source);
+          const images =
+            typeof icon.ios === "string" ? { light: icon.ios } : icon.ios;
+
+          for (const [variant, icon] of Object.entries(images)) {
+            const iconFileName = getIconAssetFileName(
+              key,
+              variant as IconVariant,
+              dimension
+            );
+            const { source } = await generateImageAsync(
+              {
+                projectRoot: config.modRequest.projectRoot,
+                cacheType: `expo-dynamic-app-icon-${dimension.width}-${dimension.height}`,
+              },
+              {
+                name: iconFileName,
+                src: icon,
+                removeTransparency: true,
+                backgroundColor: "#ffffff",
+                resizeMode: "cover",
+                width: dimension.width,
+                height: dimension.height,
+              }
+            );
+
+            const outputAssetPath = path.join(outputIconsetPath, iconFileName);
+            await fs.promises.writeFile(outputAssetPath, source);
+          }
         }
       );
 
@@ -480,14 +437,74 @@ function resolveIconDimensions(config: ExpoConfig): Required<IconDimensions>[] {
 }
 
 /** Get the icon name, used to refer to the icon from within the plist */
-function getIconName(name: string, dimension: Props["dimensions"][0]) {
-  return `${name}-Icon-${dimension.size}x${dimension.size}`;
+function getIconName(name: string) {
+  return `AppIcon-${name}`;
 }
 
-/** Get the full icon file name, including scale and possible target, used to write each exported icon to */
-function getIconFileName(name: string, dimension: Props["dimensions"][0]) {
-  const target = dimension.target ? `~${dimension.target}` : "";
-  return `${getIconName(name, dimension)}@${dimension.scale}x${target}.png`;
+/** Get the icon asset file name */
+function getIconAssetFileName(
+  key: string,
+  variant: IconVariant,
+  dimension: Required<IconDimensions>
+) {
+  return `${key}-AppIcon-${variant}-${dimension.size}x${dimension.size}@${dimension.scale}x.png`;
+}
+
+/** Generate the Contents.json for an icon set */
+function generateIconsetContents(
+  iconset: IosIconSet,
+  key: string,
+  dimension: Required<IconDimensions>
+) {
+  const lightFileName = getIconAssetFileName(key, "light", dimension);
+  const images: AssetImage[] = [
+    {
+      filename: lightFileName,
+      idiom: "universal",
+      platform: "ios",
+      size: `${dimension.size}x${dimension.size}`,
+    },
+  ];
+
+  if (typeof iconset === "object" && iconset.dark) {
+    const darkFileName = getIconAssetFileName(key, "dark", dimension);
+    images.push({
+      filename: darkFileName,
+      idiom: "universal",
+      platform: "ios",
+      size: `${dimension.size}x${dimension.size}`,
+      appearances: [
+        {
+          appearance: "luminosity",
+          value: "dark",
+        },
+      ],
+    });
+  }
+
+  if (typeof iconset === "object" && iconset.tinted) {
+    const tintedFileName = getIconAssetFileName(key, "tinted", dimension);
+    images.push({
+      filename: tintedFileName,
+      idiom: "universal",
+      platform: "ios",
+      size: `${dimension.size}x${dimension.size}`,
+      appearances: [
+        {
+          appearance: "luminosity",
+          value: "tinted",
+        },
+      ],
+    });
+  }
+
+  return {
+    images,
+    info: {
+      version: 1,
+      author: "expo",
+    },
+  };
 }
 
 /** Iterate all combinations of icons and dimensions to export */
