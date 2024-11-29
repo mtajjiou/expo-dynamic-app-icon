@@ -34,7 +34,7 @@
         "../app.plugin",
         {
           "light": {
-            "ios": "./assets/ios_icon_default_light.png",
+            "ios": "./assets/ios_icon_light.png",
             "android": "./assets/android_icon_default_light.png"
           },
           "dark": {

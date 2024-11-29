@@ -50,7 +50,7 @@ type IconDimensions = {
 
 type IconVariant = "light" | "dark" | "tinted";
 interface AssetImage {
-  filename: string;
+  filename?: string;
   idiom: "universal";
   platform: "ios";
   size: string;
@@ -454,12 +454,36 @@ function generateIconsetContents(
         },
       ],
     });
+  } else {
+    images.push({
+      idiom: "universal",
+      platform: "ios",
+      size: `${dimension.size}x${dimension.size}`,
+      appearances: [
+        {
+          appearance: "luminosity",
+          value: "dark",
+        },
+      ],
+    });
   }
 
   if (typeof iconset === "object" && iconset.tinted) {
     const tintedFileName = getIconAssetFileName(key, "tinted", dimension);
     images.push({
       filename: tintedFileName,
+      idiom: "universal",
+      platform: "ios",
+      size: `${dimension.size}x${dimension.size}`,
+      appearances: [
+        {
+          appearance: "luminosity",
+          value: "tinted",
+        },
+      ],
+    });
+  } else {
+    images.push({
       idiom: "universal",
       platform: "ios",
       size: `${dimension.size}x${dimension.size}`,
