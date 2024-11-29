@@ -35,17 +35,15 @@
         {
           "light": {
             "ios": "./assets/ios_icon_default_light.png",
-            "android": "./assets/android_icon_default_light.png",
-            "prerendered": true
+            "android": "./assets/android_icon_default_light.png"
           },
           "dark": {
             "ios": {
-              "light": "./assets/ios_icon_default_light.png",
-              "dark": "./assets/ios_icon_default_dark.png",
-              "tinted": "./assets/icon.png"
+              "light": "./assets/ios_icon_dark.png",
+              "dark": "./assets/ios_icon_dark_dark.png",
+              "tinted": "./assets/ios_icon_dark_tinted.png"
             },
-            "android": "./assets/android_icon_default_dark.png",
-            "prerendered": true
+            "android": "./assets/android_icon_default_dark.png"
           }
         }
       ]

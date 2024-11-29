@@ -1,9 +1,7 @@
 import type { ExpoConfig } from "@expo/config";
 import {
   ConfigPlugin,
-  IOSConfig,
   withDangerousMod,
-  withInfoPlist,
   withXcodeProject,
   withAndroidManifest,
   AndroidConfig,
@@ -11,8 +9,6 @@ import {
 import { generateImageAsync } from "@expo/image-utils";
 import fs from "fs";
 import path from "path";
-// @ts-ignore - no types
-import pbxFile from "xcode/lib/pbxFile";
 
 const { getMainApplicationOrThrow, getMainActivityOrThrow } =
   AndroidConfig.Manifest;
@@ -65,7 +61,6 @@ type IosIconSet = string | { light: string; dark?: string; tinted?: string };
 type IconSetProps = {
   ios?: IosIconSet;
   android?: string;
-  prerendered?: boolean;
 };
 
 type Props = {
@@ -351,6 +346,7 @@ const withIconImages: ConfigPlugin<Props> = (config, { icons, dimensions }) => {
               variant as IconVariant,
               dimension
             );
+            const isTransparent = variant === "dark";
             const { source } = await generateImageAsync(
               {
                 projectRoot: config.modRequest.projectRoot,
@@ -359,8 +355,8 @@ const withIconImages: ConfigPlugin<Props> = (config, { icons, dimensions }) => {
               {
                 name: iconFileName,
                 src: icon,
-                removeTransparency: true,
-                backgroundColor: "#ffffff",
+                removeTransparency: !isTransparent,
+                backgroundColor: isTransparent ? "transparent" : "#ffffff",
                 resizeMode: "cover",
                 width: dimension.width,
                 height: dimension.height,
