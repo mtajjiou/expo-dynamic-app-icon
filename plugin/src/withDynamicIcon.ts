@@ -100,10 +100,7 @@ function withGenerateTypes(config: ExpoConfig, props: { icons: IconSet }) {
 
   const buildFile = path.join(moduleRoot, "build", "types.d.ts");
   const buildFileContent = fs.readFileSync(buildFile, "utf8");
-  const updatedContent = buildFileContent.replace(
-    "IconName: string",
-    unionType
-  );
+  const updatedContent = buildFileContent.replace(/IconName:\s.*/, unionType);
   fs.writeFileSync(buildFile, updatedContent);
 
   return config;
