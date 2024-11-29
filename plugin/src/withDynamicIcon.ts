@@ -28,7 +28,6 @@ const ANDROID_FOLDER_NAMES = [
 const ANDROID_SIZES = [162, 108, 216, 324, 432];
 
 /** The default icon folder name to export to */
-const IOS_FOLDER_NAME = "DynamicAppIcons";
 const IOS_ASSETS_FOLDER_NAME = "Images.xcassets";
 /**
  * The default icon dimensions to export.
@@ -36,11 +35,8 @@ const IOS_ASSETS_FOLDER_NAME = "Images.xcassets";
  * @see https://developer.apple.com/design/human-interface-guidelines/app-icons#iOS-iPadOS-app-icon-sizes
  */
 const IOS_ICON_DIMENSIONS: IconDimensions[] = [
-  // iPhone, iPad, MacOS, ...
+  // iPhone, iPad, MacOS
   { scale: 1, size: 1024 },
-  // // iPad only
-  // { scale: 2, size: 60, width: 152, height: 152, target: "ipad" },
-  // { scale: 3, size: 60, width: 167, height: 167, target: "ipad" },
 ];
 
 type IconDimensions = {
@@ -85,7 +81,7 @@ const withDynamicIcon: ConfigPlugin<string[] | IconSet | void> = (
   const dimensions = resolveIconDimensions(config);
 
   // for ios
-  config = withIconInfoPlist(config, { icons, dimensions });
+  config = withIconXcodeProject(config, { icons, dimensions });
   config = withIconImages(config, { icons, dimensions });
 
   // for android
@@ -250,65 +246,56 @@ const withIconAndroidImages: ConfigPlugin<Props> = (config, { icons }) => {
 //                                   iOS
 // =============================================================================
 
-const withIconInfoPlist: ConfigPlugin<Props> = (
+const withIconXcodeProject: ConfigPlugin<Props> = (
   config,
   { icons, dimensions }
 ) => {
-  return withInfoPlist(config, async (config) => {
-    const altIcons: Record<
-      string,
-      { CFBundleIconFiles: string[]; UIPrerenderedIcon: boolean }
-    > = {};
+  return withXcodeProject(config, async (config) => {
+    const project = config.modResults;
 
-    const altIconsByTarget: Partial<
-      Record<NonNullable<IconDimensions["target"]>, typeof altIcons>
-    > = {};
+    // Remove old settings
+    const configurations = project.hash.project.objects["XCBuildConfiguration"];
+    for (const id of Object.keys(configurations)) {
+      const configuration =
+        project.hash.project.objects["XCBuildConfiguration"][id];
+      if (typeof configuration !== "object") continue;
 
-    await iterateIconsAndDimensionsAsync(
-      { icons, dimensions },
-      async (key, { icon, dimension }) => {
-        if (!icon.ios) return;
-        const plistItem = {
-          CFBundleIconFiles: [getIconName(key)],
-          UIPrerenderedIcon: !!icon.prerendered,
-        };
-
-        if (dimension.target) {
-          altIconsByTarget[dimension.target] =
-            altIconsByTarget[dimension.target] || {};
-          altIconsByTarget[dimension.target]![key] = plistItem;
-        } else {
-          altIcons[key] = plistItem;
-        }
-      }
-    );
-
-    function applyToPlist(key: string, icons: typeof altIcons) {
-      if (
-        typeof config.modResults[key] !== "object" ||
-        Array.isArray(config.modResults[key]) ||
-        !config.modResults[key]
-      ) {
-        config.modResults[key] = {};
-      }
-
-      // @ts-ignore
-      config.modResults[key].CFBundleAlternateIcons = icons;
-
-      // @ts-ignore
-      config.modResults[key].CFBundlePrimaryIcon = {
-        CFBundleIconFiles: ["AppIcon"],
-      };
+      const buildSettings = configuration.buildSettings;
+      delete buildSettings["ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES"];
+      delete buildSettings["ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS"];
+      delete buildSettings["ASSETCATALOG_COMPILER_APPICON_NAME"];
+      project.hash.project.objects["XCBuildConfiguration"][id].buildSettings =
+        buildSettings;
     }
 
-    // Apply for general phone support
-    applyToPlist("CFBundleIcons", altIcons);
+    // Add new settings
+    for (const id of Object.keys(configurations)) {
+      const configuration =
+        project.hash.project.objects["XCBuildConfiguration"][id];
+      if (typeof configuration !== "object") continue;
 
-    // Apply for each target, like iPad
-    for (const [target, icons] of Object.entries(altIconsByTarget)) {
-      if (Object.keys(icons).length > 0) {
-        applyToPlist(`CFBundleIcons~${target}`, icons);
-      }
+      const buildSettings = configuration.buildSettings;
+
+      // Include all AppIcon assets
+      buildSettings["ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS"] = "YES";
+
+      // Include all alternate AppIcon names
+      const names: string[] = [];
+      await iterateIconsAndDimensionsAsync(
+        { icons, dimensions },
+        async (key) => {
+          const iconName = getIconName(key);
+          names.push(iconName);
+        }
+      );
+      buildSettings["ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES"] =
+        JSON.stringify(names.join(" "));
+
+      // Include default icon
+      buildSettings["ASSETCATALOG_COMPILER_APPICON_NAME"] = "AppIcon";
+
+      project.hash.project.objects["XCBuildConfiguration"][id].buildSettings =
+        buildSettings;
     }
 
     return config;
@@ -324,28 +311,15 @@ const withIconImages: ConfigPlugin<Props> = (config, { icons, dimensions }) => {
         config.modRequest.projectName!
       );
 
-      // Delete all existing assets
-      await fs.promises
-        .rm(path.join(iosRoot, IOS_FOLDER_NAME), {
-          recursive: true,
-          force: true,
-        })
-        .catch(() => null);
-
-      // Ensure directory exists
-      await fs.promises.mkdir(path.join(iosRoot, IOS_FOLDER_NAME), {
-        recursive: true,
-      });
-
-      // Generate new assets
       await iterateIconsAndDimensionsAsync(
         { icons, dimensions },
         async (key, { icon, dimension }) => {
           if (!icon.ios) return;
 
+          // Clean the old AppIcon-*.appiconset
           const iconsetPath = path.join(
             IOS_ASSETS_FOLDER_NAME,
-            `AppIcon-${key}.appiconset`
+            `${getIconName(key)}.appiconset`
           );
           const outputIconsetPath = path.join(iosRoot, iconsetPath);
           await fs.promises
@@ -356,6 +330,7 @@ const withIconImages: ConfigPlugin<Props> = (config, { icons, dimensions }) => {
             .catch(() => null);
           await fs.promises.mkdir(outputIconsetPath, { recursive: true });
 
+          // Generate the Contents.json file
           const contents = generateIconsetContents(icon.ios, key, dimension);
           const outputContentsPath = path.join(
             outputIconsetPath,
@@ -369,6 +344,7 @@ const withIconImages: ConfigPlugin<Props> = (config, { icons, dimensions }) => {
           const images =
             typeof icon.ios === "string" ? { light: icon.ios } : icon.ios;
 
+          // Generate the assets for each variant
           for (const [variant, icon] of Object.entries(images)) {
             const iconFileName = getIconAssetFileName(
               key,
@@ -447,7 +423,9 @@ function getIconAssetFileName(
   variant: IconVariant,
   dimension: Required<IconDimensions>
 ) {
-  return `${key}-AppIcon-${variant}-${dimension.size}x${dimension.size}@${dimension.scale}x.png`;
+  const name = `${getIconName(key)}-${variant}`;
+  const size = `${dimension.size}x${dimension.size}@${dimension.scale}x`;
+  return `${name}-${size}.png`;
 }
 
 /** Generate the Contents.json for an icon set */
