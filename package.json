@@ -1,5 +1,5 @@
 {
-  "name": "@mozzius/expo-dynamic-app-icon",
+  "name": "@howincodes/expo-dynamic-app-icon",
   "version": "1.6.0",
   "description": "Programmatically change the app icon in Expo.",
   "main": "build/index.js",
@@ -25,13 +25,13 @@
     "expo-dynamic-app-icon",
     "ExpoDynamicAppIcon"
   ],
-  "repository": "https://github.com/mozzius/expo-dynamic-app-icon",
+  "repository": "https://github.com/howincodes/expo-dynamic-app-icon",
   "bugs": {
-    "url": "https://github.com/mozzius/expo-dynamic-app-icon/issues"
+    "url": "https://github.com/howincodes/expo-dynamic-app-icon/issues"
   },
-  "author": "Samuel Newman <mozzius@protonmail.com> (https://github.com/mozzius)",
+  "author": "Faris Basha T M <bashahowin@gmail.com> (https://github.com/howincodes)",
   "license": "MIT",
-  "homepage": "https://github.com/mozzius/expo-dynamic-app-icon#readme",
+  "homepage": "https://github.com/howincodes/expo-dynamic-app-icon#readme",
   "dependencies": {
     "expo-modules-core": "^2.1.1",
     "@expo/image-utils": "^0.6.3",

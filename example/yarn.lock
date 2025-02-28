@@ -1408,7 +1408,7 @@
     "@jridgewell/resolve-uri" "^3.1.0"
     "@jridgewell/sourcemap-codec" "^1.4.14"
 
-"@mozzius/expo-dynamic-app-icon@link:./..":
+"@howincodes/expo-dynamic-app-icon@link:./..":
   version "0.0.0"
   uid ""
 

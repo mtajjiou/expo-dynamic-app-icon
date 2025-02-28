@@ -31,7 +31,7 @@
     },
     "plugins": [
       [
-        "@mozzius/expo-dynamic-app-icon",
+        "@howincodes/expo-dynamic-app-icon",
         {
           "light": {
             "ios": "./assets/ios_icon_light.png",

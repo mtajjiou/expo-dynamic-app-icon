@@ -1,4 +1,4 @@
-# @mozzius/expo-dynamic-app-icon
+# @howincodes/expo-dynamic-app-icon
 
 > [!NOTE]
 > This is a fork of [expo-dynamic-app-icon](https://github.com/outsung/expo-dynamic-app-icon) to support Expo SDK 51.
@@ -14,7 +14,7 @@ Programmatically change the app icon in Expo.
 ## Install
 
 ```
-npx expo install @mozzius/expo-dynamic-app-icon
+npx expo install @howincodes/expo-dynamic-app-icon
 ```
 
 ## Set icon file
@@ -24,7 +24,7 @@ add plugins in `app.json`
 ```typescript
 "plugins": [
   [
-    "@mozzius/expo-dynamic-app-icon",
+    "@howincodes/expo-dynamic-app-icon",
     {
       "red": { // icon name
         "ios": "./assets/ios_icon1.png", // icon path for iOS
