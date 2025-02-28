@@ -1,7 +1,3 @@
-Here's your updated README with a mention of **[howincloud.com](https://howincloud.com/)**:
-
----
-
 # 🎨 @howincodes/expo-dynamic-app-icon
 
 Easily **change your app icon dynamically** in **Expo SDK 52**!
@@ -11,6 +7,7 @@ Easily **change your app icon dynamically** in **Expo SDK 52**!
 ✅ Support for **round icons**  
 ✅ Different icons for **iOS and Android**  
 ✅ Dynamic icon variants for **iOS** (light, dark, tinted)  
+✅ **IOS Icon Update** without alert popup
 ✅ **Simple API** to get and set the app icon
 
 ---
