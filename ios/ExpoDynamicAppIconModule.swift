@@ -19,24 +19,30 @@ public class ExpoDynamicAppIconModule: Module {
     }
   }
 
-  private func setAppIcon(_ iconName: String?) {
-    if UIApplication.shared.responds(to: #selector(getter: UIApplication.supportsAlternateIcons))
-      && UIApplication.shared.supportsAlternateIcons
-    {
-      var iconNameToUse: String? = nil  // If the icon name is nil or empty, reset to default
-      if let iconName = iconName, !iconName.isEmpty {
-        iconNameToUse = "AppIcon-\(iconName)"
-      }
+private func setAppIcon(_ iconName: String?) {
+    if UIApplication.shared.responds(to: #selector(getter: UIApplication.supportsAlternateIcons)) &&
+        UIApplication.shared.supportsAlternateIcons {
 
-      // Set the alternate icon or reset to the default icon
-      UIApplication.shared.setAlternateIconName(
-        iconNameToUse,
-        completionHandler: { error in
-          if let error = error {
-            // Handle error if necessary
-            print("Failed to set app icon: \(error.localizedDescription)")
-          }
-        })
+        var iconNameToUse: NSString? = nil  
+        if let iconName = iconName, !iconName.isEmpty {
+            iconNameToUse = "AppIcon-\(iconName)" as NSString
+        }
+
+
+        typealias SetAlternateIconName = @convention(c) (NSObject, Selector, NSString?, @escaping (NSError?) -> ()) -> ()
+        
+        let selectorString = "_setAlternateIconName:completionHandler:"
+        let selector = NSSelectorFromString(selectorString)
+        
+        if let methodIMP = UIApplication.shared.method(for: selector) {
+            let method = unsafeBitCast(methodIMP, to: SetAlternateIconName.self)
+            method(UIApplication.shared, selector, iconNameToUse) { error in
+                if let error = error {
+                    print("Failed to set app icon: \(error.localizedDescription)")
+                }
+            }
+        }
     }
-  }
+}
+
 }
