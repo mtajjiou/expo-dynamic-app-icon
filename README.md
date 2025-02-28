@@ -12,6 +12,13 @@ Easily **change your app icon dynamically** in **Expo SDK 52**!
 
 ---
 
+## Demo🚀
+
+![dynamic-icon-demo-5](https://github.com/user-attachments/assets/3dced15a-8d4e-4eb9-b76c-4c7c8fc9f59a)
+
+
+---
+
 ## 📦 Installation
 
 ```sh
@@ -118,6 +125,8 @@ console.log(icon); // "red" (or "DEFAULT" if not changed)
 ```
 
 ---
+
+
 
 ## ☕ Support the Original Author
 
