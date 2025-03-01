@@ -18,6 +18,9 @@ class ExpoDynamicAppIconModule : Module() {
           // Reset to default icon
           var currentIcon = if (!SharedObject.icon.isEmpty()) SharedObject.icon else context.packageName + ".MainActivity"
 
+          if (currentIcon == context.packageName + ".MainActivity") {
+            return@Function "DEFAULT"
+          }
           // Disable the current icon alias if it's set
           pm.setComponentEnabledSetting(
             ComponentName(context.packageName, currentIcon),
@@ -43,6 +46,10 @@ class ExpoDynamicAppIconModule : Module() {
 
           SharedObject.packageName = context.packageName
           SharedObject.pm = pm
+
+          if (currentIcon == newIcon) {
+            return@Function name
+          }
 
           // Enable the new icon alias
           pm.setComponentEnabledSetting(
