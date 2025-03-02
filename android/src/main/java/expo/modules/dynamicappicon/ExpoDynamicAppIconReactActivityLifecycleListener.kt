@@ -5,11 +5,10 @@ import android.app.ActivityManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
-import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import expo.modules.core.interfaces.ReactActivityLifecycleListener
-// import android.widget.Toast
+//  import android.widget.Toast
 
 
 object SharedObject {
@@ -17,52 +16,41 @@ object SharedObject {
     var classesToKill = ArrayList<String>()
     var icon: String = ""
     var pm: PackageManager? = null
+    var shouldChangeIcon: Boolean = false
 }
 // For Support Contact: bashahowin@gmail.com
 
 // Used Toast for easy Debugging purpose
 class ExpoDynamicAppIconReactActivityLifecycleListener : ReactActivityLifecycleListener {
-
-    companion object {
-        private const val TAG = "HowincodesDynamicAppIcon"
-        private const val BACKGROUND_CHECK_DELAY = 500L
-    }
-
-    private val handler = Handler(Looper.getMainLooper())
-    private var isChangingIcon = false
-    private var isPaused = false
-
     override fun onPause(activity: Activity) {
-        // Toast.makeText(activity, "Onpause Triggered", Toast.LENGTH_LONG).show()
-       isPaused = true
-        applyIconChange(activity)
+
+        if(SharedObject.shouldChangeIcon){
+            // Toast.makeText(activity, "Onpause Triggered and icon will be changed", Toast.LENGTH_LONG).show()
+             applyIconChange(activity)
+        }
     }
 
     override fun onDestroy(activity: Activity) {
         // Toast.makeText(activity, "OnDestroy Triggered", Toast.LENGTH_LONG).show()
-        applyIconChange(activity)
+        if(SharedObject.shouldChangeIcon){
+            // Toast.makeText(activity, "OnDestroy Triggered and icon will be changed", Toast.LENGTH_LONG).show()
+             applyIconChange(activity)
+        }
+       
     }
 
     override fun onResume(activity: Activity) {
         // Toast.makeText(activity, "Onresume Triggered", Toast.LENGTH_LONG).show()
-        isPaused = false
     }
 
     private fun applyIconChange(activity: Activity) {
     // Toast.makeText(activity, "Attempting to change the app icon", Toast.LENGTH_SHORT).show()
-    if (isChangingIcon) {
-        // Toast.makeText(activity, "Icon change already in progress; skipping", Toast.LENGTH_SHORT).show()
-        return
-    }
-
-    isChangingIcon = true
 
     SharedObject.icon.takeIf { it.isNotEmpty() }?.let { icon ->
         val newComponent = ComponentName(SharedObject.packageName, icon)
-
         if (!doesComponentExist(activity, newComponent)) {
             // Toast.makeText(activity, "Component not found: $icon", Toast.LENGTH_LONG).show()
-            isChangingIcon = false
+            SharedObject.shouldChangeIcon = false
             return
         }
 
@@ -92,8 +80,8 @@ class ExpoDynamicAppIconReactActivityLifecycleListener : ReactActivityLifecycleL
             // Toast.makeText(activity, "Icon changed to: $icon", Toast.LENGTH_LONG).show()
         } catch (e: Exception) {
             // Toast.makeText(activity, "Error enabling: $icon", Toast.LENGTH_SHORT).show()
-        } finally {
-            isChangingIcon = false
+        }finally{
+            SharedObject.shouldChangeIcon = false
         }
     }
 }

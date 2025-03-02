@@ -20,6 +20,7 @@ class ExpoDynamicAppIconModule : Module() {
       try {
         SharedObject.packageName = context.packageName
         SharedObject.pm = pm
+        SharedObject.shouldChangeIcon = true
 
         if (name == null) {
           // Reseting  to default icon if nothing  passed
