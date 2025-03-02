@@ -8,7 +8,9 @@ import android.content.pm.PackageManager
 import android.os.Looper
 import android.util.Log
 import expo.modules.core.interfaces.ReactActivityLifecycleListener
-//  import android.widget.Toast
+//import android.widget.Toast
+import android.os.Handler
+
 
 
 object SharedObject {
@@ -22,75 +24,136 @@ object SharedObject {
 
 // Used Toast for easy Debugging purpose
 class ExpoDynamicAppIconReactActivityLifecycleListener : ReactActivityLifecycleListener {
-    override fun onPause(activity: Activity) {
 
-        if(SharedObject.shouldChangeIcon){
-            // Toast.makeText(activity, "Onpause Triggered and icon will be changed", Toast.LENGTH_LONG).show()
-             applyIconChange(activity)
+    private var currentActivity: Activity? = null
+    private var isBackground = false
+    private val handler = Handler(Looper.getMainLooper())
+    private val backgroundCheckRunnable = Runnable {
+        if (isBackground) {
+            onBackground()
         }
     }
 
-    override fun onDestroy(activity: Activity) {
-        // Toast.makeText(activity, "OnDestroy Triggered", Toast.LENGTH_LONG).show()
-        if(SharedObject.shouldChangeIcon){
-            // Toast.makeText(activity, "OnDestroy Triggered and icon will be changed", Toast.LENGTH_LONG).show()
-             applyIconChange(activity)
-        }
-       
+     override fun onPause(activity: Activity) {
+        currentActivity = activity
+        isBackground = true
+        handler.postDelayed(backgroundCheckRunnable, 5000)
     }
 
     override fun onResume(activity: Activity) {
-        // Toast.makeText(activity, "Onresume Triggered", Toast.LENGTH_LONG).show()
+        currentActivity = activity
+        isBackground = false
+        handler.removeCallbacks(backgroundCheckRunnable)
+        //Toast.makeText(activity, "App is in Foreground", Toast.LENGTH_SHORT).show()
     }
 
-    private fun applyIconChange(activity: Activity) {
-    // Toast.makeText(activity, "Attempting to change the app icon", Toast.LENGTH_SHORT).show()
 
+    override fun onDestroy(activity: Activity) {
+        handler.removeCallbacks(backgroundCheckRunnable)
+        //Toast.makeText(activity, "OnDestroy Triggered,shouldChangeIcon: ${SharedObject.shouldChangeIcon}", Toast.LENGTH_LONG).show()
+        if(SharedObject.shouldChangeIcon){
+            //Toast.makeText(activity, "OnDestroy Triggered and icon will be changed", Toast.LENGTH_LONG).show()
+             applyIconChange(activity)
+        }
+        if (currentActivity === activity) {
+            currentActivity = null
+        }
+       
+    }
+    private fun onBackground() {
+        currentActivity?.let { activity ->
+            //Toast.makeText(activity, "App is in Background (onStop-like)", Toast.LENGTH_SHORT).show()
+            
+            if (SharedObject.shouldChangeIcon) {
+                applyIconChange(activity)
+            }
+        }
+    }
+
+private fun applyIconChange(activity: Activity) {
     SharedObject.icon.takeIf { it.isNotEmpty() }?.let { icon ->
+        val pm = SharedObject.pm ?: return
         val newComponent = ComponentName(SharedObject.packageName, icon)
-        if (!doesComponentExist(activity, newComponent)) {
-            // Toast.makeText(activity, "Component not found: $icon", Toast.LENGTH_LONG).show()
+
+        if (!doesComponentExist(newComponent)) {
             SharedObject.shouldChangeIcon = false
             return
         }
 
-        SharedObject.classesToKill.forEach { cls ->
-            if (cls != icon) {
-                try {
-                    SharedObject.pm?.setComponentEnabledSetting(
-                        ComponentName(SharedObject.packageName, cls),
+        try {
+            // Get all launcher activities and disable all except the new one
+            val packageInfo = pm.getPackageInfo(
+                SharedObject.packageName,
+                PackageManager.GET_ACTIVITIES or PackageManager.GET_DISABLED_COMPONENTS
+            )
+
+            packageInfo.activities?.forEach { activityInfo ->
+                val componentName = ComponentName(SharedObject.packageName, activityInfo.name)
+                val state = pm.getComponentEnabledSetting(componentName)
+
+                if (activityInfo.name != icon && state != PackageManager.COMPONENT_ENABLED_STATE_DISABLED) {
+                    pm.setComponentEnabledSetting(
+                        componentName,
                         PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
                         PackageManager.DONT_KILL_APP
                     )
-                    // Toast.makeText(activity, "Disabled: $cls", Toast.LENGTH_SHORT).show()
-                } catch (e: Exception) {
-                    // Toast.makeText(activity, "Error disabling: $cls", Toast.LENGTH_SHORT).show()
+                    Log.i("IconChange", "Disabled component: ${activityInfo.name}")
                 }
             }
-        }
 
-        SharedObject.classesToKill.clear()
-
-        try {
-            SharedObject.pm?.setComponentEnabledSetting(
+            // Enable the new icon
+            pm.setComponentEnabledSetting(
                 newComponent,
                 PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
                 PackageManager.DONT_KILL_APP
             )
-            // Toast.makeText(activity, "Icon changed to: $icon", Toast.LENGTH_LONG).show()
+            Log.i("IconChange", "Enabled new icon: $icon")
+
         } catch (e: Exception) {
-            // Toast.makeText(activity, "Error enabling: $icon", Toast.LENGTH_SHORT).show()
-        }finally{
+            Log.e("IconChange", "Error during icon change", e)
+        } finally {
             SharedObject.shouldChangeIcon = false
         }
+
+        // Ensure at least one component is enabled
+        ensureAtLeastOneComponentEnabled(activity)
     }
 }
 
 
+
+private fun ensureAtLeastOneComponentEnabled(context: Context) {
+    val pm = SharedObject.pm ?: return
+    val packageInfo = pm.getPackageInfo(
+        SharedObject.packageName,
+        PackageManager.GET_ACTIVITIES or PackageManager.GET_DISABLED_COMPONENTS
+    )
+
+    val hasEnabledComponent = packageInfo.activities?.any { activityInfo ->
+        val componentName = ComponentName(SharedObject.packageName, activityInfo.name)
+        pm.getComponentEnabledSetting(componentName) == PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+    } ?: false
+
+    if (!hasEnabledComponent) {
+        val mainActivityName = "${SharedObject.packageName}.MainActivity"
+        val mainComponent = ComponentName(SharedObject.packageName, mainActivityName)
+        try {
+            pm.setComponentEnabledSetting(
+                mainComponent,
+                PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                PackageManager.DONT_KILL_APP
+            )
+            Log.i("IconChange", "No active component found. Re-enabling $mainActivityName")
+        } catch (e: Exception) {
+            Log.e("IconChange", "Error enabling fallback MainActivity", e)
+        }
+    }
+}
+
     /**
      * Check if a component exists in the manifest (including disabled ones).
      */
-    private fun doesComponentExist(activity: Activity, componentName: ComponentName): Boolean {
+    private fun doesComponentExist(componentName: ComponentName): Boolean {
     return try {
         val packageInfo = SharedObject.pm?.getPackageInfo(
             SharedObject.packageName,
@@ -98,10 +161,10 @@ class ExpoDynamicAppIconReactActivityLifecycleListener : ReactActivityLifecycleL
         )
 
         val activityExists = packageInfo?.activities?.any { it.name == componentName.className } == true
-        // Toast.makeText(activity, "Component exists: ${componentName.className} -> $activityExists", Toast.LENGTH_SHORT).show()
+
         activityExists
     } catch (e: Exception) {
-        // Toast.makeText(activity, "Error checking component existence", Toast.LENGTH_SHORT).show()
+
         false
     }
 }
