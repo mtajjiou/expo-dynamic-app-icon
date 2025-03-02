@@ -2,20 +2,24 @@
 
 Easily **change your app icon dynamically** in **Expo SDK 52**!
 
-🚀 **Features:**  
+## 🚀 **What's New in v2:**
+
+✨ **Android icon change without app restart!**  
+✨ Seamless icon updates while the app stays running  
+✨ Improved stability and performance
+
+## 🎁 **Features:**
+
 ✅ Reset icon to default  
 ✅ Support for **round icons**  
 ✅ Different icons for **iOS and Android**  
 ✅ Dynamic icon variants for **iOS** (light, dark, tinted)  
-✅ **IOS Icon Update** without alert popup   
+✅ iOS icon update **without alert popup**  
 ✅ **Simple API** to get and set the app icon
-
----
 
 ## Demo🚀
 
 ![dynamic-icon-demo-5](https://github.com/user-attachments/assets/3dced15a-8d4e-4eb9-b76c-4c7c8fc9f59a)
-
 
 ---
 
@@ -125,8 +129,6 @@ console.log(icon); // "red" (or "DEFAULT" if not changed)
 ```
 
 ---
-
-
 
 ## ☕ Support the Original Author
 

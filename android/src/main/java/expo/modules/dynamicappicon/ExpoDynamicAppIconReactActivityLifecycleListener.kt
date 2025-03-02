@@ -18,8 +18,11 @@ object SharedObject {
     var icon: String = ""
     var pm: PackageManager? = null
 }
+// For Support Contact: bashahowin@gmail.com
 
+// Used Toast for easy Debugging purpose
 class ExpoDynamicAppIconReactActivityLifecycleListener : ReactActivityLifecycleListener {
+
     companion object {
         private const val TAG = "HowincodesDynamicAppIcon"
         private const val BACKGROUND_CHECK_DELAY = 500L

@@ -11,6 +11,7 @@ import expo.modules.kotlin.modules.ModuleDefinition
 
 class ExpoDynamicAppIconModule : Module() {
 
+  // For Support Contact: bashahowin@gmail.com
 
   override fun definition() = ModuleDefinition {
     Name("ExpoDynamicAppIcon")
@@ -21,33 +22,19 @@ class ExpoDynamicAppIconModule : Module() {
         SharedObject.pm = pm
 
         if (name == null) {
-          // Reset to default icon
+          // Reseting  to default icon if nothing  passed
           var currentIcon = if (!SharedObject.icon.isEmpty()) SharedObject.icon else context.packageName + ".MainActivity"
 
           if (currentIcon == context.packageName + ".MainActivity") {
             return@Function "DEFAULT"
           }
-          // Disable the current icon alias if it's set
-          // pm.setComponentEnabledSetting(
-          //   ComponentName(context.packageName, currentIcon),
-          //   PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
-          //   PackageManager.DONT_KILL_APP
-          // )
 
-          // Enable the default icon alias (MainActivity)
-          // pm.setComponentEnabledSetting(
-          //   ComponentName(context.packageName, context.packageName + ".MainActivity"),
-          //   PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
-          //   PackageManager.DONT_KILL_APP
-          // )
-
-          // Reset SharedObject icon to default
-          SharedObject.classesToKill.add(currentIcon) // Add the current icon to kill()
+          SharedObject.classesToKill.add(currentIcon) 
           SharedObject.icon = context.packageName + ".MainActivity"
 
-          return@Function "DEFAULT" // Return a string indicating default icon
+          return@Function "DEFAULT" 
         } else {
-          // Set the new app icon
+
           var newIcon: String = context.packageName + ".MainActivity" + name
           var currentIcon: String = if (!SharedObject.icon.isEmpty()) SharedObject.icon else context.packageName + ".MainActivity"
 
@@ -55,21 +42,6 @@ class ExpoDynamicAppIconModule : Module() {
             return@Function name
           }
 
-          // Enable the new icon alias
-          // pm.setComponentEnabledSetting(
-          //   ComponentName(context.packageName, newIcon),
-          //   PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
-          //   PackageManager.DONT_KILL_APP
-          // )
-
-          // Disable the current icon alias
-          // pm.setComponentEnabledSetting(
-          //   ComponentName(context.packageName, currentIcon),
-          //   PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
-          //   PackageManager.DONT_KILL_APP
-          // )
-
-          // Update the icon in SharedObject
           SharedObject.classesToKill.add(currentIcon)
           SharedObject.icon = newIcon
 
