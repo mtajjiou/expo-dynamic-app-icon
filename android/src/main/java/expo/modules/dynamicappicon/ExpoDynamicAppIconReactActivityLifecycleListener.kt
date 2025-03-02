@@ -19,6 +19,7 @@ object SharedObject {
     var icon: String = ""
     var pm: PackageManager? = null
     var shouldChangeIcon: Boolean = false
+    var isInBackground: Boolean = true
 }
 // For Support Contact: bashahowin@gmail.com
 
@@ -37,7 +38,7 @@ class ExpoDynamicAppIconReactActivityLifecycleListener : ReactActivityLifecycleL
      override fun onPause(activity: Activity) {
         currentActivity = activity
         isBackground = true
-        handler.postDelayed(backgroundCheckRunnable, 5000)
+        handler.postDelayed(backgroundCheckRunnable, if (SharedObject.isInBackground) 5000 else 0)
     }
 
     override fun onResume(activity: Activity) {

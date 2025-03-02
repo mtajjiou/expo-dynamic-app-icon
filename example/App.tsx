@@ -34,7 +34,7 @@ export default function App() {
       <View style={{ marginBottom: 16 }}>
         <Button
           title="change light icon"
-          onPress={() => console.log(setAppIcon("light"))}
+          onPress={() => console.log(setAppIcon("light", false))}
         />
       </View>
 

@@ -16,11 +16,12 @@ class ExpoDynamicAppIconModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("ExpoDynamicAppIcon")
 
-    Function("setAppIcon") { name: String? ->
+    Function("setAppIcon") { name: String?, isInBackground: Boolean? ->
       try {
         SharedObject.packageName = context.packageName
         SharedObject.pm = pm
         SharedObject.shouldChangeIcon = true
+        SharedObject.isInBackground = isInBackground ?: true
 
         if (name == null) {
           // Reseting  to default icon if nothing  passed

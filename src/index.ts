@@ -4,9 +4,10 @@ import { DynamicAppIconRegistry } from "./types";
 export type IconName = DynamicAppIconRegistry["IconName"];
 
 export function setAppIcon(
-  name: IconName | null
+  name: IconName | null,
+  isInBackground: boolean = true
 ): IconName | "DEFAULT" | false {
-  return ExpoDynamicAppIconModule.setAppIcon(name);
+  return ExpoDynamicAppIconModule.setAppIcon(name, isInBackground);
 }
 
 export function getAppIcon(): IconName | "DEFAULT" {

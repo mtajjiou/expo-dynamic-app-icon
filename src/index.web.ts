@@ -3,7 +3,8 @@ import { DynamicAppIconRegistry } from "./types";
 export type IconName = DynamicAppIconRegistry["IconName"];
 
 export function setAppIcon(
-  name: IconName | null
+  name: IconName | null,
+  isInBackground: boolean = true
 ): IconName | "DEFAULT" | false {
   console.error("setAppIcon is not supported on web");
   return false;
