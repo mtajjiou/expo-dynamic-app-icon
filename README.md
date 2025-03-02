@@ -14,7 +14,7 @@ Easily **change your app icon dynamically** in **Expo SDK 52**!
 ✅ Support for **round icons**  
 ✅ Different icons for **iOS and Android**  
 ✅ Dynamic icon variants for **iOS** (light, dark, tinted)  
-✅ iOS icon update **without alert popup**  
+✅ iOS icon update **with or without alert popup**  
 ✅ **Simple API** to get and set the app icon
 
 ## Demo🚀
@@ -106,17 +106,38 @@ Then, check if the following lines have been added to `AndroidManifest.xml`:
 ```typescript
 import { setAppIcon } from "@howincodes/expo-dynamic-app-icon";
 
-// Change app icon to 'red'
+/**
+ * Change app icon to 'red'
+ */
 setAppIcon("red");
 
-// Reset to default icon
+/**
+ * Reset to default icon
+ */
 setAppIcon(null);
 ```
 
-Returns:
+#### ✅ Available Parameters:
 
-- `false` if an error occurs
-- The **new icon name** on success
+```typescript
+setAppIcon(
+  name: IconName | null,
+  isInBackground?: boolean
+)
+```
+
+| Parameter        | Type               | Default | Description                                                                                                                    |
+| ---------------- | ------------------ | ------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `name`           | `IconName \| null` | `null`  | The icon name to switch to. Pass `null` to reset to the default icon.                                                          |
+| `isInBackground` | `boolean`          | `true`  | - `true`: Icon changes silently in the background (no alert on iOS).<br>- `false`: Immediate change, with system alert on iOS. |
+
+#### ✅ Returns:
+
+- `"DEFAULT"` if reset to the original icon.
+- The **new icon name** on success.
+- `false` if an error occurs.
+
+---
 
 ### **Get Current Icon**
 
@@ -129,6 +150,24 @@ console.log(icon); // "red" (or "DEFAULT" if not changed)
 ```
 
 ---
+
+### ⚠️ Notes:
+
+- **Android limitations:**  
+  Android does **not** support icon changes while the app is running in the foreground.  
+  To work around this, the icon is changed when the app enters the **Pause state** (background).
+
+- ⚠️ **Pause state** can also trigger during events like permission dialogs.  
+  To avoid unwanted icon changes, a **5-second delay** is added to ensure the app is truly in the background.
+
+- To disable the delay and apply the icon change immediately (with the risk of it running during permission dialogs or other pause events), set:
+
+  ```typescript
+  setAppIcon("red", false);
+  ```
+
+  - On **iOS**, `isInBackground: false` triggers the system alert immediately.
+  - On **Android**, it applies the icon change right away without waiting.
 
 ## ☕ Support the Original Author
 
