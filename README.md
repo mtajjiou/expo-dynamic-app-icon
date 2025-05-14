@@ -4,17 +4,17 @@ Easily **change your app icon dynamically** in **Expo SDK 52**!
 
 ## 🚀 **What's New in v2:**
 
-✨ **Android icon change without app restart!**  
-✨ Seamless icon updates while the app stays running  
+✨ **Android icon change without app restart!**
+✨ Seamless icon updates while the app stays running
 ✨ Improved stability and performance
 
 ## 🎁 **Features:**
 
-✅ Reset icon to default  
-✅ Support for **round icons**  
-✅ Different icons for **iOS and Android**  
-✅ Dynamic icon variants for **iOS** (light, dark, tinted)  
-✅ iOS icon update **with or without alert popup**  
+✅ Reset icon to default
+✅ Support for **round icons**
+✅ Different icons for **iOS and Android**
+✅ Dynamic icon variants for **iOS** (light, dark, tinted)
+✅ iOS icon update **with or without alert popup**
 ✅ **Simple API** to get and set the app icon
 
 ## Demo🚀
@@ -40,24 +40,39 @@ Add the plugin to your `app.json`:
   [
     "@howincodes/expo-dynamic-app-icon",
     {
-      "red": {
-        "ios": "./assets/ios_icon1.png",
-        "android": "./assets/android_icon1.png"
-      },
-      "gray": {
-        "android": "./assets/icon2.png"
-      },
-      "dynamic": {
-        "ios": {
-          "light": "./assets/ios_icon_light.png",
-          "dark": "./assets/ios_icon_dark.png",
-          "tinted": "./assets/ios_icon_tinted.png"
+      "defaultLight": {
+        "ios": "./assets/ios_icon_light.png",
+        "android": {
+          "foregroundImage": "./assets/android_icon_light_fg.png",
+          "backgroundColor": "#FFFFFF"
         }
+      },
+      "defaultDark": {
+        "ios": "./assets/ios_icon_dark.png",
+        "android": {
+          "foregroundImage": "./assets/android_icon_dark_fg.png",
+          "backgroundColor": "#121212"
+        }
+      },
+      "legacyRed": {
+        "ios": "./assets/ios_icon_red.png",
+        "android": "./assets/android_icon_red_legacy.png" // Legacy string format still supported
+      },
+      "dynamicTheme": {
+        "ios": {
+          "light": "./assets/ios_icon_themed_light.png",
+          "dark": "./assets/ios_icon_themed_dark.png",
+          "tinted": "./assets/ios_icon_themed_tinted.png"
+        }
+        // Android can also use the adaptive format here if desired
       }
     }
   ]
 ]
 ```
+
+**Note on Android Adaptive Icons:**
+For Android, you can now provide an object with `foregroundImage` (path to your foreground asset) and `backgroundColor` (hex string) to generate proper adaptive icons. If you provide a direct string path, it will be treated as a legacy icon.
 
 ---
 
@@ -69,26 +84,34 @@ Run the following command:
 expo prebuild
 ```
 
-Then, check if the following lines have been added to `AndroidManifest.xml`:
+Then, check if the following lines have been added to `AndroidManifest.xml`. The `android:icon` and `android:roundIcon` attributes will point to different resources based on your configuration:
+
+**For Adaptive Icons (example: `defaultDark`):**
 
 ```xml
 <activity-alias
-  android:name="expo.modules.dynamicappicon.example.MainActivityred"
+  android:name="expo.modules.dynamicappicon.example.MainActivitydefaultDark"
   android:enabled="false"
   android:exported="true"
-  android:icon="@mipmap/red"
+  android:icon="@mipmap/ic_launcher_adaptive_defaultdark"
+  android:roundIcon="@mipmap/ic_launcher_adaptive_defaultdark"
   android:targetActivity=".MainActivity">
   <intent-filter>
     <action android:name="android.intent.action.MAIN"/>
     <category android:name="android.intent.category.LAUNCHER"/>
   </intent-filter>
 </activity-alias>
+```
 
+**For Legacy Icons (example: `legacyRed`):**
+
+```xml
 <activity-alias
-  android:name="expo.modules.dynamicappicon.example.MainActivitygray"
+  android:name="expo.modules.dynamicappicon.example.MainActivitylegacyRed"
   android:enabled="false"
   android:exported="true"
-  android:icon="@mipmap/gray"
+  android:icon="@mipmap/legacyred"
+  android:roundIcon="@mipmap/legacyred_round"
   android:targetActivity=".MainActivity">
   <intent-filter>
     <action android:name="android.intent.action.MAIN"/>
@@ -153,11 +176,11 @@ console.log(icon); // "red" (or "DEFAULT" if not changed)
 
 ### ⚠️ Notes:
 
-- **Android limitations:**  
-  Android does **not** support icon changes while the app is running in the foreground.  
+- **Android limitations:**
+  Android does **not** support icon changes while the app is running in the foreground.
   To work around this, the icon is changed when the app enters the **Pause state** (background).
 
-- ⚠️ **Pause state** can also trigger during events like permission dialogs.  
+- ⚠️ **Pause state** can also trigger during events like permission dialogs.
   To avoid unwanted icon changes, a **5-second delay** is added to ensure the app is truly in the background.
 
 - To disable the delay and apply the icon change immediately (with the risk of it running during permission dialogs or other pause events), set:

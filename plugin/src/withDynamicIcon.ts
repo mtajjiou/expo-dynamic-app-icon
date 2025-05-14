@@ -8,8 +8,8 @@ import {
   ExportedConfigWithProps,
 } from "@expo/config-plugins";
 import { generateImageAsync } from "@expo/image-utils";
-import fs from "fs";
-import path from "path";
+import * as fs from "fs";
+import * as path from "path";
 
 const moduleRoot = path.join(__dirname, "..", "..");
 
@@ -59,11 +59,17 @@ interface AssetImage {
   size: string;
   appearances?: { appearance: "luminosity"; value: IconVariant }[];
 }
+
+type AndroidAdaptiveIconConfig = {
+  foregroundImage: string;
+  backgroundColor: string;
+};
+
 type IconSet = Record<string, IconSetProps>;
 type IosIconSet = string | { light: string; dark?: string; tinted?: string };
 type IconSetProps = {
   ios?: IosIconSet;
-  android?: string;
+  android?: string | AndroidAdaptiveIconConfig;
 };
 
 type Props = {
@@ -113,6 +119,10 @@ function withGenerateTypes(config: ExpoConfig, props: { icons: IconSet }) {
 //                                    Android
 // =============================================================================
 
+const getSafeResourceName = (name: string) => {
+  return name.replace(/[^a-zA-Z0-9_]/g, "_").toLowerCase();
+};
+
 const withIconAndroidManifest: ConfigPlugin<Props> = (config, { icons }) => {
   return withAndroidManifest(config, (config) => {
     const mainApplication: any = getMainApplicationOrThrow(config.modResults);
@@ -124,33 +134,53 @@ const withIconAndroidManifest: ConfigPlugin<Props> = (config, { icons }) => {
     function addIconActivityAlias(config: any[]): any[] {
       return [
         ...config,
-        ...iconNames.map((iconName) => ({
-          $: {
-            "android:name": `${iconNamePrefix}${iconName}`,
-            "android:enabled": "false",
-            "android:exported": "true",
-            "android:icon": `@mipmap/${iconName}`,
-            "android:targetActivity": ".MainActivity",
-            "android:roundIcon": `@mipmap/${iconName}_round`,
-          },
-          "intent-filter": [
-            ...(mainActivity["intent-filter"] || [
-              {
-                action: [
-                  { $: { "android:name": "android.intent.action.MAIN" } },
-                ],
-                category: [
-                  { $: { "android:name": "android.intent.category.LAUNCHER" } },
-                ],
-              },
-            ]),
-          ],
-        })),
+        ...iconNames.map((iconKey) => {
+          const iconProps = icons[iconKey];
+          const androidConfig = iconProps.android;
+          const safeIconKey = getSafeResourceName(iconKey);
+          let iconResourceName: string;
+          let roundIconResourceName: string;
+
+          if (typeof androidConfig === "object" && androidConfig !== null) {
+            // Adaptive icon
+            iconResourceName = `@mipmap/ic_launcher_adaptive_${safeIconKey}`;
+            roundIconResourceName = `@mipmap/ic_launcher_adaptive_${safeIconKey}`;
+          } else {
+            // Legacy icon (or if androidConfig is a string)
+            iconResourceName = `@mipmap/${safeIconKey}`;
+            roundIconResourceName = `@mipmap/${safeIconKey}_round`;
+          }
+
+          return {
+            $: {
+              "android:name": `${iconNamePrefix}${iconKey}`,
+              "android:enabled": "false",
+              "android:exported": "true",
+              "android:icon": iconResourceName,
+              "android:targetActivity": ".MainActivity",
+              "android:roundIcon": roundIconResourceName,
+            },
+            "intent-filter": [
+              ...(mainActivity["intent-filter"] || [
+                {
+                  action: [
+                    { $: { "android:name": "android.intent.action.MAIN" } },
+                  ],
+                  category: [
+                    {
+                      $: { "android:name": "android.intent.category.LAUNCHER" },
+                    },
+                  ],
+                },
+              ]),
+            ],
+          };
+        }),
       ];
     }
 
-    function removeIconActivityAlias(config: any[]): any[] {
-      return config.filter(
+    function removeIconActivityAlias(currentActivityAliases: any[]): any[] {
+      return currentActivityAliases.filter(
         (activityAlias) =>
           !(activityAlias.$["android:name"] as string).startsWith(
             iconNamePrefix
@@ -158,14 +188,12 @@ const withIconAndroidManifest: ConfigPlugin<Props> = (config, { icons }) => {
       );
     }
 
-    mainApplication["activity-alias"] = removeIconActivityAlias(
-      mainApplication["activity-alias"] || []
-    );
-    mainApplication["activity-alias"] = addIconActivityAlias(
-      mainApplication["activity-alias"] || []
-    );
+    let activityAliases = mainApplication["activity-alias"] || [];
+    activityAliases = removeIconActivityAlias(activityAliases);
+    activityAliases = addIconActivityAlias(activityAliases);
+    mainApplication["activity-alias"] = activityAliases;
 
-    return config;
+    return config; // Return the modified config object itself
   });
 };
 
@@ -178,76 +206,186 @@ const withIconAndroidImages: ConfigPlugin<Props> = (config, { icons }) => {
         ...ANDROID_FOLDER_PATH
       );
 
-      const removeIconRes = async () => {
-        for (let i = 0; ANDROID_FOLDER_NAMES.length > i; i += 1) {
-          const folder = path.join(androidResPath, ANDROID_FOLDER_NAMES[i]);
+      const drawableDirPath = path.join(androidResPath, "drawable");
+      const mipmapAnyDpiV26DirPath = path.join(
+        androidResPath,
+        "mipmap-anydpi-v26"
+      );
 
-          const files = await fs.promises.readdir(folder).catch(() => []);
-          for (let j = 0; files.length > j; j += 1) {
-            if (!files[j].startsWith("ic_launcher")) {
-              await fs.promises
-                .rm(path.join(folder, files[j]), { force: true })
-                .catch(() => null);
+      // Ensure directories exist
+      await fs.promises.mkdir(drawableDirPath, { recursive: true });
+      await fs.promises.mkdir(mipmapAnyDpiV26DirPath, { recursive: true });
+
+      const removeIconRes = async () => {
+        // Clean up legacy mipmap-*dpi folders
+        for (const folderName of ANDROID_FOLDER_NAMES) {
+          const folderPath = path.join(androidResPath, folderName);
+          const files = await fs.promises.readdir(folderPath).catch(() => []);
+          for (const file of files) {
+            // Avoid deleting main ic_launcher files, only those generated by this plugin (conventionally named)
+            // This logic might need refinement to be more precise about what this plugin generated previously.
+            if (
+              !file.startsWith("ic_launcher.") &&
+              !file.startsWith("ic_launcher_round.")
+            ) {
+              const isPluginGenerated = Object.keys(icons).some(
+                (iconKey) =>
+                  file.startsWith(`${getSafeResourceName(iconKey)}.png`) ||
+                  file.startsWith(`${getSafeResourceName(iconKey)}_round.png`)
+              );
+              if (isPluginGenerated) {
+                await fs.promises
+                  .rm(path.join(folderPath, file), { force: true })
+                  .catch(() => null);
+              }
             }
           }
         }
-      };
-      const addIconRes = async () => {
-        for (let i = 0; ANDROID_FOLDER_NAMES.length > i; i += 1) {
-          const size = ANDROID_SIZES[i];
-          const outputPath = path.join(androidResPath, ANDROID_FOLDER_NAMES[i]);
-
-          // square ones
-          for (const [name, { android }] of Object.entries(icons)) {
-            if (!android) continue;
-            const fileName = `${name}.png`;
-
-            const { source } = await generateImageAsync(
-              {
-                projectRoot: config.modRequest.projectRoot,
-                cacheType: `expo-dynamic-app-icon-${size}`,
-              },
-              {
-                name: fileName,
-                src: android,
-                removeTransparency: true,
-                backgroundColor: "#ffffff",
-                resizeMode: "cover",
-                width: size,
-                height: size,
-              }
-            );
-            await fs.promises.writeFile(
-              path.join(outputPath, fileName),
-              source
-            );
+        // Clean up adaptive icon files from drawable and mipmap-anydpi-v26
+        // This assumes a naming convention for plugin-generated adaptive icons.
+        const drawableFiles = await fs.promises
+          .readdir(drawableDirPath)
+          .catch(() => []);
+        for (const file of drawableFiles) {
+          if (
+            Object.keys(icons).some((iconKey) =>
+              file.startsWith(
+                `ic_launcher_adaptive_${getSafeResourceName(iconKey)}_`
+              )
+            )
+          ) {
+            await fs.promises
+              .rm(path.join(drawableDirPath, file), { force: true })
+              .catch(() => null);
           }
+        }
+        const mipmapAnyDpiFiles = await fs.promises
+          .readdir(mipmapAnyDpiV26DirPath)
+          .catch(() => []);
+        for (const file of mipmapAnyDpiFiles) {
+          if (
+            Object.keys(icons).some((iconKey) =>
+              file.startsWith(
+                `ic_launcher_adaptive_${getSafeResourceName(iconKey)}.xml`
+              )
+            )
+          ) {
+            await fs.promises
+              .rm(path.join(mipmapAnyDpiV26DirPath, file), { force: true })
+              .catch(() => null);
+          }
+        }
+      };
 
-          // round ones
-          for (const [name, { android }] of Object.entries(icons)) {
-            if (!android) continue;
-            const fileName = `${name}_round.png`;
+      const addIconRes = async () => {
+        for (const [iconConfigName, iconProps] of Object.entries(icons)) {
+          const androidConfig = iconProps.android;
 
-            const { source } = await generateImageAsync(
+          if (typeof androidConfig === "object" && androidConfig !== null) {
+            // Handle Adaptive Icons
+            const safeIconKey = getSafeResourceName(iconConfigName);
+            const foregroundBaseName = `ic_launcher_adaptive_${safeIconKey}_fg`;
+            const backgroundBaseName = `ic_launcher_adaptive_${safeIconKey}_bg`;
+            const adaptiveIconBaseName = `ic_launcher_adaptive_${safeIconKey}`;
+
+            // Foreground Image
+            const foregroundImageSrc = path.resolve(
+              config.modRequest.projectRoot,
+              androidConfig.foregroundImage
+            );
+            const foregroundImageDest = path.join(
+              drawableDirPath,
+              `${foregroundBaseName}.png`
+            );
+            const { source: foregroundSource } = await generateImageAsync(
               {
                 projectRoot: config.modRequest.projectRoot,
-                cacheType: `expo-dynamic-app-icon-round-${size}`,
+                cacheType: `expo-dynamic-app-icon-fg-${safeIconKey}`,
               },
               {
-                name: fileName,
-                src: android,
-                removeTransparency: true,
-                backgroundColor: "#ffffff",
-                resizeMode: "cover",
-                width: size,
-                height: size,
-                borderRadius: size / 2,
+                src: foregroundImageSrc,
+                removeTransparency: false,
+                backgroundColor: "transparent", // Ensure transparency is kept
+                width: 432, // Standard dimension for foreground assets
+                height: 432,
+                resizeMode: "contain", // Preserve aspect ratio within the bounds
               }
             );
-            await fs.promises.writeFile(
-              path.join(outputPath, fileName),
-              source
+            await fs.promises.writeFile(foregroundImageDest, foregroundSource);
+
+            // Background Color Drawable
+            const backgroundColorXml = `<shape xmlns:android="http://schemas.android.com/apk/res/android">\n    <solid android:color="${androidConfig.backgroundColor}" />\n</shape>`;
+            const backgroundDrawablePath = path.join(
+              drawableDirPath,
+              `${backgroundBaseName}.xml`
             );
+            await fs.promises.writeFile(
+              backgroundDrawablePath,
+              backgroundColorXml
+            );
+
+            // Adaptive Icon XML
+            const adaptiveIconXml = `<?xml version="1.0" encoding="utf-8"?>\n<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n    <background android:drawable="@drawable/${backgroundBaseName}" />\n    <foreground android:drawable="@drawable/${foregroundBaseName}" />\n</adaptive-icon>`;
+            const adaptiveIconXmlPath = path.join(
+              mipmapAnyDpiV26DirPath,
+              `${adaptiveIconBaseName}.xml`
+            );
+            await fs.promises.writeFile(adaptiveIconXmlPath, adaptiveIconXml);
+          } else if (typeof androidConfig === "string") {
+            // Handle Legacy Icons (existing logic)
+            for (let i = 0; ANDROID_FOLDER_NAMES.length > i; i += 1) {
+              const size = ANDROID_SIZES[i];
+              const outputPath = path.join(
+                androidResPath,
+                ANDROID_FOLDER_NAMES[i]
+              );
+              const safeIconKey = getSafeResourceName(iconConfigName); // Use the same safe name
+
+              // Square ones
+              const fileNameSquare = `${safeIconKey}.png`;
+              const { source: sourceSquare } = await generateImageAsync(
+                {
+                  projectRoot: config.modRequest.projectRoot,
+                  cacheType: `expo-dynamic-app-icon-${safeIconKey}-${size}`,
+                },
+                {
+                  name: fileNameSquare,
+                  src: androidConfig,
+                  removeTransparency: true,
+                  backgroundColor: "#ffffff",
+                  resizeMode: "cover",
+                  width: size,
+                  height: size,
+                }
+              );
+              await fs.promises.writeFile(
+                path.join(outputPath, fileNameSquare),
+                sourceSquare
+              );
+
+              // Round ones
+              const fileNameRound = `${safeIconKey}_round.png`;
+              const { source: sourceRound } = await generateImageAsync(
+                {
+                  projectRoot: config.modRequest.projectRoot,
+                  cacheType: `expo-dynamic-app-icon-round-${safeIconKey}-${size}`,
+                },
+                {
+                  name: fileNameRound,
+                  src: androidConfig,
+                  removeTransparency: true,
+                  backgroundColor: "#ffffff",
+                  resizeMode: "cover",
+                  width: size,
+                  height: size,
+                  borderRadius: size / 2,
+                }
+              );
+              await fs.promises.writeFile(
+                path.join(outputPath, fileNameRound),
+                sourceRound
+              );
+            }
           }
         }
       };

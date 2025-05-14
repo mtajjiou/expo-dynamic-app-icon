@@ -35,7 +35,10 @@
         {
           "light": {
             "ios": "./assets/ios_icon_light.png",
-            "android": "./assets/android_icon_default_light.png"
+            "android": {
+              "foregroundImage": "./assets/android_icon_default_light.png",
+              "backgroundColor": "#FFFFFF"
+            }
           },
           "dark": {
             "ios": {
